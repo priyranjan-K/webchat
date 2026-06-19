@@ -1,0 +1,40 @@
+server:
+  port: 9876
+
+spring:
+  application:
+    name: webchat-server
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/webchat?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false          # Prevent lazy-loading issues in REST controllers
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  secret: mySecretKeyForWebChatApplicationThisIsAVeryLongSecretKeyForJWTEncryption
+  expiration: 86400000           # 24 hours in milliseconds
+
+# CORS allowed origins — override per environment (dev/staging/prod)
+# e.g. set cors.allowed-origins=https://app.example.com in prod
+cors:
+  allowed-origins: http://localhost:3000,http://localhost:3001,http://localhost:9876
+
+# Token cleanup schedule override (optional — defaults to AppConstants.TOKEN_CLEANUP_RATE_MS)
+# token:
+#   cleanup:
+#     rate-ms: 3600000
+
+logging:
+  level:
+    root: INFO
+    au.com.example.webchat.server: DEBUG
