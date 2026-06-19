@@ -1,0 +1,216 @@
+/* ═══════════════════════════════════════════════════
+   Confirmation Dialog — Premium Glassmorphic Modal
+   ═══════════════════════════════════════════════════ */
+
+/* Backdrop overlay with blur effect */
+.dialog-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(4, 6, 12, 0.7);
+  backdrop-filter: blur(8px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: dialogFadeIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  padding: 20px;
+}
+
+/* Modal Dialog Box */
+.dialog-box {
+  background: rgba(20, 29, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--glass-shadow), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 440px;
+  padding: 24px;
+  outline: none;
+  animation: dialogZoomIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Visual color-coded indicators (top borders) */
+.dialog-box.type-danger {
+  border-top: 4px solid var(--error);
+}
+.dialog-box.type-warning {
+  border-top: 4px solid var(--warning);
+}
+.dialog-box.type-success {
+  border-top: 4px solid var(--success);
+}
+.dialog-box.type-info {
+  border-top: 4px solid var(--accent);
+}
+
+/* Header layout */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Color-coded Icon wrappers */
+.dialog-icon-wrapper {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.dialog-icon-wrapper.icon-danger {
+  background: rgba(255, 71, 87, 0.12);
+  color: var(--error);
+  border: 1px solid rgba(255, 71, 87, 0.2);
+}
+
+.dialog-icon-wrapper.icon-warning {
+  background: rgba(246, 169, 75, 0.12);
+  color: var(--warning);
+  border: 1px solid rgba(246, 169, 75, 0.2);
+}
+
+.dialog-icon-wrapper.icon-success {
+  background: rgba(16, 212, 142, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(16, 212, 142, 0.2);
+}
+
+.dialog-icon-wrapper.icon-info {
+  background: rgba(108, 99, 255, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+}
+
+/* Typography styles */
+.dialog-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.dialog-body {
+  padding-left: 2px;
+}
+
+.dialog-message {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Footer & Buttons */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.dialog-btn {
+  padding: 10px 22px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-btn:active {
+  transform: translateY(1px);
+}
+
+.dialog-btn.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.dialog-btn.btn-cancel:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Confirm Button Themes */
+.dialog-btn.btn-confirm {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.dialog-btn.btn-confirm.btn-danger {
+  background: var(--error);
+  color: #ffffff;
+}
+.dialog-btn.btn-confirm.btn-danger:hover {
+  background: #ff5b69;
+  box-shadow: 0 0 16px rgba(255, 71, 87, 0.35);
+  transform: translateY(-1px);
+}
+
+.dialog-btn.btn-confirm.btn-warning {
+  background: var(--warning);
+  color: #ffffff;
+}
+.dialog-btn.btn-confirm.btn-warning:hover {
+  background: #fca738;
+  box-shadow: 0 0 16px rgba(246, 169, 75, 0.35);
+  transform: translateY(-1px);
+}
+
+.dialog-btn.btn-confirm.btn-success {
+  background: var(--success);
+  color: var(--bg-base);
+}
+.dialog-btn.btn-confirm.btn-success:hover {
+  background: #00edbc;
+  box-shadow: 0 0 16px rgba(16, 212, 142, 0.35);
+  transform: translateY(-1px);
+}
+
+.dialog-btn.btn-confirm.btn-info {
+  background: var(--accent);
+  color: #ffffff;
+}
+.dialog-btn.btn-confirm.btn-info:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 0 16px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+/* Keyframes for smooth entrance animations */
+@keyframes dialogFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialogZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
