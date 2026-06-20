@@ -14,7 +14,6 @@ public class WebChatServerApplication {
         SpringApplication.run(WebChatServerApplication.class, args);
         log.info("=================================================");
         log.info("WebChat Server started successfully!");
-        log.info("WebSocket URL: ws://localhost:8080/ws/chat");
         log.info("=================================================");
     }
 }

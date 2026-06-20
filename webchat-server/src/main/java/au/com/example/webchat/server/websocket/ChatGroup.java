@@ -31,6 +31,8 @@ public class ChatGroup {
     private long   createdAt;
     private Set<String> members;
     private Set<String> admins;
+    @Builder.Default
+    private Set<String> leftMembers = new CopyOnWriteArraySet<>();
 
     /**
      * Convenience constructor — initialises timestamps, creates the member and admin sets,
@@ -49,17 +51,25 @@ public class ChatGroup {
         this.members.add(creator);
         this.admins    = new CopyOnWriteArraySet<>();
         this.admins.add(creator);
+        this.leftMembers = new CopyOnWriteArraySet<>();
     }
 
     /** Adds a member to this group. No-op if already a member. */
     public void addMember(String phoneNumber) {
         this.members.add(phoneNumber);
+        if (this.leftMembers != null) {
+            this.leftMembers.remove(phoneNumber);
+        }
     }
 
     /** Removes a member from this group and automatically removes admin status. Transfess ownership if creator leaves. */
     public void removeMember(String phoneNumber) {
         this.members.remove(phoneNumber);
         this.admins.remove(phoneNumber);
+        if (this.leftMembers == null) {
+            this.leftMembers = new CopyOnWriteArraySet<>();
+        }
+        this.leftMembers.add(phoneNumber);
         if (phoneNumber.equals(creator) && !this.members.isEmpty()) {
             String newCreator = this.admins.stream().findFirst().orElse(null);
             if (newCreator == null) {

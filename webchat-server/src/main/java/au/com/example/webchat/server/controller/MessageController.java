@@ -5,18 +5,16 @@ import au.com.example.webchat.server.service.MessageService;
 import au.com.example.webchat.server.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
 /**
- * REST controller for message history retrieval.
- * <p>
- * Provides endpoints to fetch historical messages for direct conversations
- * and group chats. Real-time message delivery happens over WebSocket.
- * All logic is delegated to {@link MessageService}.
+ * REST controller for message history retrieval in Spring WebFlux.
  */
 @RestController
 @RequestMapping("/api/messages")
@@ -33,9 +31,11 @@ public class MessageController {
      * @return ordered list of message entities (ascending by timestamp)
      */
     @GetMapping("/dm/{counterpart}")
-    public List<MessageEntity> getDmHistory(@PathVariable String counterpart) {
-        String currentUser = currentUserPhone();
-        return messageService.getDmHistory(currentUser, counterpart);
+    public Mono<List<MessageEntity>> getDmHistory(@PathVariable String counterpart) {
+        return currentUserPhone().flatMap(currentUser ->
+            Mono.fromCallable(() -> messageService.getDmHistory(currentUser, counterpart))
+                .subscribeOn(Schedulers.boundedElastic())
+        );
     }
 
     /**
@@ -45,20 +45,27 @@ public class MessageController {
      * @return ordered list of message entities (ascending by timestamp)
      */
     @GetMapping("/group/{groupId}")
-    public List<MessageEntity> getGroupHistory(@PathVariable String groupId) {
-        String currentUser = currentUserPhone();
-        boolean isMember = groupService.findGroup(groupId)
-                .map(group -> group.hasMember(currentUser))
-                .orElse(false);
-        if (!isMember) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
-        }
-        return messageService.getGroupHistory(groupId);
+    public Mono<List<MessageEntity>> getGroupHistory(@PathVariable String groupId) {
+        return currentUserPhone().flatMap(currentUser ->
+            Mono.fromCallable(() -> groupService.findGroup(groupId))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(optGroup -> {
+                    boolean isMember = optGroup
+                            .map(group -> group.hasMember(currentUser) || (group.getLeftMembers() != null && group.getLeftMembers().contains(currentUser)))
+                            .orElse(false);
+                    if (!isMember) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group"));
+                    }
+                    return Mono.fromCallable(() -> messageService.getGroupHistory(groupId))
+                            .subscribeOn(Schedulers.boundedElastic());
+                })
+        );
     }
 
     // ── Internal helper ─────────────────────────────────────────────────────
 
-    private String currentUserPhone() {
-        return (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    private Mono<String> currentUserPhone() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(ctx -> (String) ctx.getAuthentication().getPrincipal());
     }
 }

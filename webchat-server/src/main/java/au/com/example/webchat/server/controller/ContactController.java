@@ -5,16 +5,15 @@ import au.com.example.webchat.server.service.ContactService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
 /**
- * REST controller for contact management.
- * <p>
- * Exposes endpoints for adding contacts and retrieving a user's contact list.
- * All business logic is delegated to {@link ContactService}.
+ * REST controller for contact management in Spring WebFlux.
  */
 @RestController
 @RequestMapping("/api/contacts")
@@ -31,30 +30,34 @@ public class ContactController {
      * @return {@code 200 OK} on success, {@code 400 Bad Request} if validation fails
      */
     @PostMapping("/add")
-    public ResponseEntity<String> addContact(@RequestParam String phone) {
-        String currentUser = currentUserPhone();
-        try {
-            contactService.addContact(currentUser, phone);
-            return ResponseEntity.ok("Contact added successfully!");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public Mono<ResponseEntity<String>> addContact(@RequestParam String phone) {
+        return currentUserPhone().flatMap(currentUser -> 
+            Mono.fromRunnable(() -> contactService.addContact(currentUser, phone))
+                .subscribeOn(Schedulers.boundedElastic())
+                .then(Mono.just(ResponseEntity.ok("Contact added successfully!")))
+                .onErrorResume(IllegalArgumentException.class, e -> 
+                    Mono.just(ResponseEntity.badRequest().body(e.getMessage()))
+                )
+        );
     }
 
     /**
-     * Returns the authenticated user's merged contact list:
-     * explicitly added contacts plus inferred DM partners.
+     * Returns the authenticated user's merged contact list.
      *
      * @return list of {@link UserDto} profiles
      */
     @GetMapping
-    public List<UserDto> getContacts() {
-        return contactService.getContacts(currentUserPhone());
+    public Mono<List<UserDto>> getContacts() {
+        return currentUserPhone().flatMap(currentUser ->
+            Mono.fromCallable(() -> contactService.getContacts(currentUser))
+                .subscribeOn(Schedulers.boundedElastic())
+        );
     }
 
     // ── Internal helper ─────────────────────────────────────────────────────
 
-    private String currentUserPhone() {
-        return (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    private Mono<String> currentUserPhone() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(ctx -> (String) ctx.getAuthentication().getPrincipal());
     }
 }

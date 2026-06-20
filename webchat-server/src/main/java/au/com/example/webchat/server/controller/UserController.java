@@ -6,15 +6,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
 /**
- * REST controller for user profile operations.
- * <p>
- * Currently exposes a single endpoint to retrieve all registered users
- * (used by the client to resolve display names for contacts).
- * All logic is delegated to {@link UserService}.
+ * REST controller for user profile operations in Spring WebFlux.
  */
 @RestController
 @RequestMapping("/api/users")
@@ -30,7 +28,8 @@ public class UserController {
      * @return list of {@link UserDto} profiles
      */
     @GetMapping
-    public List<UserDto> getAllUsers() {
-        return userService.getAllUsers();
+    public Mono<List<UserDto>> getAllUsers() {
+        return Mono.fromCallable(() -> userService.getAllUsers())
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }

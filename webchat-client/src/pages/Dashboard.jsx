@@ -44,6 +44,11 @@ function Dashboard({ setIsAuthenticated }) {
   const [unreadCounts, setUnreadCounts] = useState({})
   const [showInfo, setShowInfo] = useState(true)
 
+  const myMemberDetail = groupMembers.find(member => member.phoneNumber === userPhone);
+  const isMeAdmin = myMemberDetail ? (myMemberDetail.isAdmin === 'true' || myMemberDetail.isAdmin === true) : false;
+  const isMeCreator = activeGroup ? activeGroup.creator === userPhone : false;
+  const canAdd = isMeAdmin || isMeCreator;
+
   // ── Dialog States & Helpers ─────────────────────────────────────────────
   const [dialogState, setDialogState] = useState({
     isOpen: false,
@@ -193,7 +198,7 @@ function Dashboard({ setIsAuthenticated }) {
   const onGroupKick = useCallback((msg) => {
     loadGroupsRef.current()
     if (groupIdRef.current && groupIdRef.current === msg.groupId) {
-      navigateRef.current('/chat')
+      loadGroupMembersRef.current()
       alertActionRef.current(`You were removed from the group: ${msg.content ?? ''}`, 'Removed from Group', 'warning')
     }
   }, [])
@@ -401,9 +406,8 @@ function Dashboard({ setIsAuthenticated }) {
     })
     if (confirmed) {
       ws.send(WS_MESSAGE_TYPES.REMOVE_GROUP_MEMBER, { groupId, content: userPhone })
-      navigate('/chat')
     }
-  }, [groupId, userPhone, navigate, confirmAction])
+  }, [groupId, userPhone, confirmAction])
 
   const handleDeleteDm = useCallback(async () => {
     if (!recipientPhone) return
@@ -446,7 +450,6 @@ function Dashboard({ setIsAuthenticated }) {
       })
       if (confirmed) {
         ws.send(WS_MESSAGE_TYPES.REMOVE_GROUP_MEMBER, { groupId: group.groupId, content: userPhone })
-        if (groupId === group.groupId) navigate('/chat')
       }
     }
   }, [userPhone, groupId, navigate, confirmAction])
@@ -538,10 +541,6 @@ function Dashboard({ setIsAuthenticated }) {
             <h4>Members</h4>
             <div className="member-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
               {(() => {
-                const myMemberDetail = groupMembers.find(member => member.phoneNumber === userPhone);
-                const isMeAdmin = myMemberDetail ? (myMemberDetail.isAdmin === 'true' || myMemberDetail.isAdmin === true) : false;
-                const isMeCreator = activeGroup.creator === userPhone;
-
                 return groupMembers.map((m) => {
                   const mIsAdmin = m.isAdmin === 'true' || m.isAdmin === true;
                   const mIsCreator = m.isCreator === 'true' || m.isCreator === true;
@@ -616,42 +615,44 @@ function Dashboard({ setIsAuthenticated }) {
             </div>
 
             {/* Add member form */}
-            <form onSubmit={handleAddMemberSubmit} style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <input
-                  type="text"
-                  placeholder="Member phone number…"
-                  value={newMemberPhone}
-                  autoComplete="off"
-                  onChange={(e) => {
-                    setNewMemberPhone(e.target.value)
-                    setAddMemberError('')
-                  }}
-                  style={{
-                    flex: 1, padding: '6px 10px',
-                    background: 'var(--bg-input)',
-                    border: '1.5px solid var(--border)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)', fontSize: '0.8rem',
-                  }}
-                />
-                <button
-                  type="submit"
-                  disabled={!newMemberPhone.trim() || !isConnected}
-                  style={{
-                    padding: '6px 10px', background: 'var(--accent)', color: '#fff',
-                    borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 600,
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-              {addMemberError && (
-                <span style={{ color: 'var(--error)', fontSize: '0.73rem', paddingLeft: '2px' }}>
-                  ⚠️ {addMemberError}
-                </span>
-              )}
-            </form>
+            {canAdd && (
+              <form onSubmit={handleAddMemberSubmit} style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    placeholder="Member phone number…"
+                    value={newMemberPhone}
+                    autoComplete="off"
+                    onChange={(e) => {
+                      setNewMemberPhone(e.target.value)
+                      setAddMemberError('')
+                    }}
+                    style={{
+                      flex: 1, padding: '6px 10px',
+                      background: 'var(--bg-input)',
+                      border: '1.5px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      color: 'var(--text-primary)', fontSize: '0.8rem',
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newMemberPhone.trim() || !isConnected}
+                    style={{
+                      padding: '6px 10px', background: 'var(--accent)', color: '#fff',
+                      borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 600,
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+                {addMemberError && (
+                  <span style={{ color: 'var(--error)', fontSize: '0.73rem', paddingLeft: '2px' }}>
+                    ⚠️ {addMemberError}
+                  </span>
+                )}
+              </form>
+            )}
           </div>
 
           <div className="info-section">

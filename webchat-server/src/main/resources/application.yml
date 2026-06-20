@@ -2,6 +2,8 @@ server:
   port: 9876
 
 spring:
+  main:
+    allow-bean-definition-overriding: true
   application:
     name: webchat-server
 
@@ -19,6 +21,19 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    # Producer config still used by Spring auto-configuration (kept as fallback)
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: 1
+      properties:
+        linger.ms: 0
+    # Listener factory is disabled — we use Reactor Kafka (KafkaReceiver) for consuming
+    listener:
+      auto-startup: false
 
 jwt:
   secret: mySecretKeyForWebChatApplicationThisIsAVeryLongSecretKeyForJWTEncryption

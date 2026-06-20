@@ -22,6 +22,7 @@ function ChatPanel({ chatMode, group, dmPhone, myPhone, allUsers, resolveName, s
 
   const targetId  = chatMode === 'group' ? group?.groupId : dmPhone
   const chatName  = chatMode === 'group' ? group?.groupName : resolveName(dmPhone)
+  const hasLeft   = chatMode === 'group' && group && !group.members?.includes(myPhone)
 
   const { messages, members, sendMessage } = useMessages(chatMode, targetId, myPhone)
 
@@ -70,8 +71,14 @@ function ChatPanel({ chatMode, group, dmPhone, myPhone, allUsers, resolveName, s
         value={input}
         onChange={setInput}
         onSend={handleSend}
-        placeholder={ws.isConnected ? `Message ${chatName}…` : 'Reconnecting…'}
-        disabled={!ws.isConnected}
+        placeholder={
+          hasLeft 
+            ? 'You cannot send messages because you have left this group.' 
+            : ws.isConnected 
+              ? `Message ${chatName}…` 
+              : 'Reconnecting…'
+        }
+        disabled={!ws.isConnected || hasLeft}
       />
     </>
   )

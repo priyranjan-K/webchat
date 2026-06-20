@@ -30,6 +30,7 @@ function GroupList({ groups, activeGroupId, userPhone, onSelect, onRemove, unrea
         const isMine      = group.creator === userPhone
         const memberCount = group.members?.length ?? 0
         const isActive    = activeGroupId === group.groupId
+        const hasLeft     = !group.members?.includes(userPhone)
 
         return (
           <div
@@ -64,26 +65,28 @@ function GroupList({ groups, activeGroupId, userPhone, onSelect, onRemove, unrea
               <div className="contact-preview">
                 <span className="preview-text">
                   👥 {memberCount} member{memberCount !== 1 ? 's' : ''}
-                  {isMine ? ' · you created this' : ` · by ${group.creator}`}
+                  {hasLeft ? ' · Left' : isMine ? ' · you created this' : ` · by ${group.creator}`}
                 </span>
               </div>
             </div>
 
             {/* Remove / Leave button */}
-            <button
-              className="item-remove-btn"
-              title={isMine ? 'Delete group' : 'Leave group'}
-              onClick={(e) => {
-                e.stopPropagation() // don't open the chat
-                onRemove(group)
-              }}
-              aria-label={isMine ? `Delete group ${group.groupName}` : `Leave group ${group.groupName}`}
-            >
-              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+            {!hasLeft && (
+              <button
+                className="item-remove-btn"
+                title={isMine ? 'Delete group' : 'Leave group'}
+                onClick={(e) => {
+                  e.stopPropagation() // don't open the chat
+                  onRemove(group)
+                }}
+                aria-label={isMine ? `Delete group ${group.groupName}` : `Leave group ${group.groupName}`}
+              >
+                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            )}
           </div>
         )
       })}
