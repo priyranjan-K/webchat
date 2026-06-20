@@ -17,37 +17,28 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
-    open-in-view: false          # Prevent lazy-loading issues in REST controllers
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
 
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    # Producer config still used by Spring auto-configuration (kept as fallback)
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: 1
       properties:
         linger.ms: 0
-    # Listener factory is disabled — we use Reactor Kafka (KafkaReceiver) for consuming
     listener:
       auto-startup: false
 
 jwt:
   secret: mySecretKeyForWebChatApplicationThisIsAVeryLongSecretKeyForJWTEncryption
-  expiration: 86400000           # 24 hours in milliseconds
+  expiration: 86400000
 
-# CORS allowed origins — override per environment (dev/staging/prod)
-# e.g. set cors.allowed-origins=https://app.example.com in prod
 cors:
   allowed-origins: http://localhost:3000,http://localhost:3001,http://localhost:9876
-
-# Token cleanup schedule override (optional — defaults to AppConstants.TOKEN_CLEANUP_RATE_MS)
-# token:
-#   cleanup:
-#     rate-ms: 3600000
 
 logging:
   level:

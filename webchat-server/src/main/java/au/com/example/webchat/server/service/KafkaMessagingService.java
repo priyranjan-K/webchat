@@ -11,8 +11,8 @@ import reactor.kafka.sender.KafkaSender;
 import reactor.kafka.sender.SenderRecord;
 
 /**
- * Publishes chat messages to Kafka using the fully non-blocking Reactor Kafka KafkaSender.
- * Messages are sent without blocking any Netty event-loop thread.
+ * Publishes chat messages to the {@code webchat-messages} Kafka topic
+ * using a non-blocking {@link KafkaSender}.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,12 +34,8 @@ public class KafkaMessagingService {
                     SenderRecord.create(record, message.getMessageId());
 
             kafkaSender.send(Mono.just(senderRecord))
-                    .doOnError(e -> log.error("Reactive Kafka send failed", e))
-                    .doOnNext(result -> log.debug(
-                            "Published to Kafka topic='{}' offset={} key={}",
-                            TOPIC,
-                            result.recordMetadata().offset(),
-                            key))
+                    .doOnError(e -> log.error("Kafka send failed", e))
+                    .doOnNext(r -> log.debug("Published to topic={} offset={}", TOPIC, r.recordMetadata().offset()))
                     .subscribe();
 
         } catch (Exception e) {

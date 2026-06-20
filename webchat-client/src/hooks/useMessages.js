@@ -3,37 +3,22 @@ import ws from '../services/websocketService'
 import { chatService } from '../services/chatService'
 import { WS_MESSAGE_TYPES } from '../config/constants'
 
-/**
- * Formats an epoch-millis timestamp as a short time string (HH:MM).
- * @param {number|undefined} ts
- * @returns {string}
- */
 const formatTime = (ts) =>
   ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
 
-/**
- * useMessages — manages message state for a group chat or a DM thread.
- *
- * @param {'group'|'dm'} chatMode  - conversation type
- * @param {string}       targetId  - groupId (group mode) or recipientPhone (dm mode)
- * @param {string}       myPhone   - the logged-in user's phone number
- *
- * @returns {{ messages: Array, members: Array, sendMessage: Function }}
- */
 function useMessages(chatMode, targetId, myPhone) {
   const [messages, setMessages] = useState([])
   const [members,  setMembers]  = useState([])
 
-  const prevTargetRef   = useRef(null)
-  const prevModeRef     = useRef(null)
+  const prevTargetRef = useRef(null)
+  const prevModeRef   = useRef(null)
 
-  // ── Stable message adder (avoids re-creating effect deps) ─────────────────
   const addMessage = useCallback(
     (msg) => setMessages((prev) => [...prev, msg]),
     []
   )
 
-  // ── Group TEXT handler ─────────────────────────────────────────────────────
+  // Group TEXT handler
   const onGroupText = useCallback(
     (msg) => {
       if (chatMode !== 'group' || msg.groupId !== targetId) return
@@ -77,7 +62,7 @@ function useMessages(chatMode, targetId, myPhone) {
     [chatMode, targetId, myPhone]
   )
 
-  // ── DM handler ────────────────────────────────────────────────────────────
+  // DM handler
   const onDirectMessage = useCallback(
     (msg) => {
       if (chatMode !== 'dm') return
@@ -104,7 +89,7 @@ function useMessages(chatMode, targetId, myPhone) {
     [chatMode, targetId, myPhone]
   )
 
-  // ── Group JOIN / LEAVE system messages ────────────────────────────────────
+  // JOIN / LEAVE system messages
   const onMemberEvent = useCallback(
     (msg) => {
       if (chatMode !== 'group' || msg.groupId !== targetId) return
@@ -117,7 +102,7 @@ function useMessages(chatMode, targetId, myPhone) {
     [chatMode, targetId, addMessage]
   )
 
-  // ── Switch target / load history ──────────────────────────────────────────
+  // Load history and register listeners when target changes
   useEffect(() => {
     const prevTarget = prevTargetRef.current
     const prevMode   = prevModeRef.current
@@ -176,14 +161,14 @@ function useMessages(chatMode, targetId, myPhone) {
     }
   }, [targetId, chatMode, onGroupText, onDirectMessage, onMemberEvent, myPhone])
 
-  // ── Send ───────────────────────────────────────────────────────────────────
+  // Send
   const sendMessage = useCallback(
     (content) => {
       if (!content.trim() || !targetId || !ws.isConnected) return
 
       if (chatMode === 'group') {
         chatService.sendMessage(targetId, content)
-        // Optimistic local insert — server echo will reconcile the messageId
+        // Optimistic insert — server echo reconciles the messageId
         addMessage({
           id:      Date.now(),
           content,

@@ -17,11 +17,9 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Spring Security configuration for Spring WebFlux.
- * <p>
- * Stateless JWT-based authentication with explicit public/protected endpoint rules.
- * CORS allowed origins are driven by the {@code cors.allowed-origins} property so
- * that dev and production environments can differ without code changes.
+ * Spring Security configuration for the WebFlux stack.
+ * Stateless JWT-based auth; CORS origins are driven by {@code cors.allowed-origins}
+ * so dev and production environments can differ without changing code.
  */
 @Configuration
 @EnableWebFluxSecurity
@@ -30,10 +28,6 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    /**
-     * Allowed origins loaded from {@code cors.allowed-origins} in application.yml.
-     * Defaults to localhost ports used during development.
-     */
     @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:9876}")
     private List<String> allowedOrigins;
 
@@ -58,7 +52,6 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(exchanges -> exchanges
-                // Public endpoints — no auth required
                 .pathMatchers(
                     AppConstants.API_AUTH_BASE + "/signup",
                     AppConstants.API_AUTH_BASE + "/login",
@@ -67,7 +60,6 @@ public class SecurityConfig {
                     AppConstants.HEALTH_ENDPOINT,
                     "/"
                 ).permitAll()
-                // All other endpoints require a valid JWT
                 .anyExchange().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);

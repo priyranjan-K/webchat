@@ -1,48 +1,31 @@
-/**
- * WebSocketService
- *
- * Manages the single persistent WebSocket connection to the server.
- * Supports typed event listeners, automatic exponential back-off reconnection,
- * and JWT authentication via query parameter (needed for the WS handshake).
- */
 import { STORAGE_KEYS, WS_RECONNECT_DELAYS } from '../config/constants'
 
 class WebSocketService {
   constructor() {
-    /** @type {WebSocket|null} */
     this.ws = null
-
-    /** Whether the WebSocket is currently connected and ready. */
     this.isConnected = false
-
-    /** The logged-in user's phone number, used as the sender identity. */
     this.sender = null
-
-    /** @type {Object.<string, Function[]>} Typed event listener registry. */
     this.listeners = {}
-
     this._reconnectAttempt = 0
     this._reconnectTimer   = null
     this._intentionalClose = false
   }
 
-  // ── Public API ──────────────────────────────────────────────────────────────
-
   /**
    * Opens a WebSocket connection for the given user.
-   * Call this once after login.
+   * Call once after login.
    *
    * @param {string} sender - the logged-in user's phone number
    */
   connect(sender) {
-    this.sender           = sender
+    this.sender            = sender
     this._intentionalClose = false
     this._doConnect()
   }
 
   /**
-   * Gracefully closes the WebSocket and cancels any pending reconnects.
-   * Call this on logout.
+   * Gracefully closes the connection and cancels any pending reconnects.
+   * Call on logout.
    */
   disconnect() {
     this._intentionalClose = true
@@ -58,9 +41,9 @@ class WebSocketService {
   /**
    * Sends a typed message to the server.
    *
-   * @param {string} type   - WebSocket message type (see WS_MESSAGE_TYPES)
-   * @param {Object} fields - additional fields to merge into the message payload
-   * @returns {boolean} {@code true} if the message was sent, {@code false} if not connected
+   * @param {string} type   - message type (see WS_MESSAGE_TYPES)
+   * @param {Object} fields - additional fields merged into the payload
+   * @returns {boolean} true if sent, false if not connected
    */
   send(type, fields = {}) {
     if (!this.isConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN) return false
@@ -82,8 +65,8 @@ class WebSocketService {
   /**
    * Registers a listener for a specific message type.
    *
-   * @param {string}   type     - message type to listen for (or '_connected', '_disconnected')
-   * @param {Function} callback - invoked with the parsed message object
+   * @param {string}   type     - message type, or '_connected' / '_disconnected'
+   * @param {Function} callback - called with the parsed message object
    */
   on(type, callback) {
     if (!this.listeners[type]) this.listeners[type] = []
@@ -94,14 +77,12 @@ class WebSocketService {
    * Removes a previously registered listener.
    *
    * @param {string}   type     - message type
-   * @param {Function} callback - the exact callback reference to remove
+   * @param {Function} callback - the exact reference to remove
    */
   off(type, callback) {
     if (!this.listeners[type]) return
     this.listeners[type] = this.listeners[type].filter((cb) => cb !== callback)
   }
-
-  // ── Internal ────────────────────────────────────────────────────────────────
 
   _doConnect() {
     const token    = sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
@@ -112,8 +93,6 @@ class WebSocketService {
 
     this.ws.onopen = () => {
       this._reconnectAttempt = 0
-      
-      // Ensure connection transitions to OPEN before sending registration
       const establishSession = () => {
         if (!this.ws) return
         if (this.ws.readyState === WebSocket.OPEN) {
@@ -132,7 +111,7 @@ class WebSocketService {
         const msg = JSON.parse(event.data)
         this._emit(msg.type, msg)
       } catch {
-        // Ignore non-JSON frames (e.g. server health pings)
+        // ignore non-JSON frames
       }
     }
 
@@ -162,5 +141,4 @@ class WebSocketService {
   }
 }
 
-/** Singleton instance shared across the entire application. */
 export default new WebSocketService()

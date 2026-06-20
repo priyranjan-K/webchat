@@ -15,12 +15,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
 /**
- * Consumes messages from Kafka using the fully non-blocking Reactor Kafka KafkaReceiver.
- *
- * <p>A persistent Flux subscription is established on startup. Each record is
- * processed asynchronously on a bounded-elastic thread (to avoid blocking Netty
- * event-loop threads during JSON parsing) and immediately routes the message to
- * the appropriate WebSocket sink(s) — no polling delay, no thread blocking.</p>
+ * Subscribes to the {@code webchat-messages} Kafka topic using a reactive
+ * {@link KafkaReceiver} and routes each consumed record to the correct
+ * WebSocket session(s) via {@link ReactiveChatWebSocketHandler}.
  */
 @Service
 @Slf4j
@@ -30,7 +27,6 @@ public class KafkaMessageListener {
     private final ReactiveChatWebSocketHandler  chatWebSocketHandler;
     private final ObjectMapper                  objectMapper = new ObjectMapper();
 
-    /** Holds the disposable so we can cancel on shutdown. */
     private reactor.core.Disposable subscription;
 
     public KafkaMessageListener(
@@ -42,48 +38,42 @@ public class KafkaMessageListener {
 
     @PostConstruct
     public void startConsuming() {
-        log.info("Starting Reactive Kafka consumer subscription …");
+        log.info("Starting Kafka consumer …");
 
         Flux<ReceiverRecord<String, String>> records = kafkaReceiver.receive();
 
         subscription = records
-                // Move JSON parsing off the Kafka poll thread (bounded-elastic = virtual thread backed)
                 .publishOn(Schedulers.boundedElastic())
                 .doOnNext(record -> {
                     try {
-                        String json = record.value();
-                        ChatMessage message = objectMapper.readValue(json, ChatMessage.class);
-                        log.debug("Reactive Kafka consumer received: type={} sender={}",
-                                message.getType(), message.getSender());
+                        ChatMessage message = objectMapper.readValue(record.value(), ChatMessage.class);
+                        log.debug("Kafka consumed: type={} sender={}", message.getType(), message.getSender());
                         chatWebSocketHandler.routeMessageFromKafka(message);
-                        // Acknowledge offset so Kafka knows this record is processed
                         record.receiverOffset().acknowledge();
                     } catch (Exception e) {
                         log.error("Error processing Kafka record: {}", record.value(), e);
-                        record.receiverOffset().acknowledge(); // ack even on error to avoid reprocessing
+                        record.receiverOffset().acknowledge();
                     }
                 })
-                .doOnError(e -> log.error("Reactive Kafka consumer stream error", e))
-                // Restart the stream automatically on errors (e.g. transient broker issues)
+                .doOnError(e -> log.error("Kafka consumer stream error", e))
                 .onErrorResume(e -> {
-                    log.warn("Restarting reactive Kafka consumer after error: {}", e.getMessage());
-                    return kafkaReceiver.receive()
-                            .publishOn(Schedulers.boundedElastic());
+                    log.warn("Restarting Kafka consumer after error: {}", e.getMessage());
+                    return kafkaReceiver.receive().publishOn(Schedulers.boundedElastic());
                 })
                 .subscribe(
-                        record -> { /* handled in doOnNext */ },
-                        e -> log.error("Reactive Kafka consumer terminated with error", e),
-                        () -> log.info("Reactive Kafka consumer stream completed")
+                        record -> {},
+                        e -> log.error("Kafka consumer terminated", e),
+                        () -> log.info("Kafka consumer stream completed")
                 );
 
-        log.info("Reactive Kafka consumer subscription active.");
+        log.info("Kafka consumer subscription active.");
     }
 
     @PreDestroy
     public void stopConsuming() {
         if (subscription != null && !subscription.isDisposed()) {
             subscription.dispose();
-            log.info("Reactive Kafka consumer subscription disposed.");
+            log.info("Kafka consumer subscription disposed.");
         }
     }
 }

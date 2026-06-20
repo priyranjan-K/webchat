@@ -16,11 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
- * Core authentication service.
- * <p>
  * Handles user registration, login, logout, and the password-reset flow.
- * JWT token lifecycle (creation and deletion) is managed here so that
- * controllers remain thin.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,10 +29,10 @@ public class AuthService {
     private final JwtTokenRepository jwtTokenRepository;
 
     /**
-     * Registers a new user and returns a JWT token on success.
+     * Registers a new user and issues a JWT on success.
      *
-     * @param request sign-up form data (phone number, password, display name)
-     * @return {@link AuthResponse} with token set on success, or an error message
+     * @param request sign-up form data
+     * @return {@link AuthResponse} with the token, or an error message
      */
     public AuthResponse signup(SignUpRequest request) {
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
@@ -64,10 +60,10 @@ public class AuthService {
     }
 
     /**
-     * Authenticates an existing user and returns a fresh JWT token.
+     * Authenticates an existing user and issues a fresh JWT.
      *
      * @param request login credentials
-     * @return {@link AuthResponse} with token set on success, or an error message
+     * @return {@link AuthResponse} with the token, or an error message
      */
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByPhoneNumber(request.getPhoneNumber()).orElse(null);
@@ -93,7 +89,7 @@ public class AuthService {
     }
 
     /**
-     * Invalidates all active JWT tokens for the given user (logout).
+     * Revokes all active JWT tokens for the given user (logout).
      *
      * @param phoneNumber the authenticated user's phone number
      */
@@ -103,10 +99,9 @@ public class AuthService {
     }
 
     /**
-     * Initiates the password-reset flow.
-     * <p>
-     * <strong>Note:</strong> In this demo, a mock OTP ({@value AppConstants#MOCK_OTP}) is returned
-     * in the response message. Replace with a real OTP / email / SMS service for production.
+     * Initiates a password-reset request.
+     * <p>Currently returns a mock OTP ({@value AppConstants#MOCK_OTP}).
+     * Replace with a real OTP/SMS provider before deploying to production.</p>
      *
      * @param phoneNumber the user's registered phone number
      * @return {@link AuthResponse} with instructions or an error message
@@ -125,7 +120,7 @@ public class AuthService {
     /**
      * Resets the user's password after OTP verification.
      *
-     * @param request contains phone number, OTP, and new password
+     * @param request phone number, OTP, and new password
      * @return {@link AuthResponse} indicating success or failure
      */
     public AuthResponse resetPassword(PasswordResetRequest request) {
@@ -150,21 +145,13 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-        log.info("Password reset successful for user: {}", request.getPhoneNumber());
+        log.info("Password reset for user: {}", request.getPhoneNumber());
 
         return AuthResponse.builder()
                 .message("Password reset successful!")
                 .build();
     }
 
-    // ── Internal helpers ─────────────────────────────────────────────────────
-
-    /**
-     * Generates a JWT and persists it to the database for the given phone number.
-     *
-     * @param phoneNumber the user's unique phone identifier
-     * @return the generated JWT string
-     */
     private String issueToken(String phoneNumber) {
         String token = jwtTokenProvider.generateToken(phoneNumber);
         jwtTokenRepository.save(JwtToken.builder()
