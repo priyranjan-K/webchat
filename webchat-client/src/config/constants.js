@@ -22,6 +22,7 @@ export const PUBLIC_AUTH_ENDPOINTS = Object.freeze([
   '/auth/login',
   '/auth/signup',
   '/auth/forgot-password',
+  '/auth/public-key',
 ])
 
 // ── WebSocket ────────────────────────────────────────────────────────────────

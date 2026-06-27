@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .pathMatchers(
                     AppConstants.API_AUTH_BASE + "/signup",
                     AppConstants.API_AUTH_BASE + "/login",
+                    AppConstants.API_AUTH_BASE + "/public-key",
                     AppConstants.API_AUTH_BASE + "/forgot-password/**",
                     AppConstants.API_AUTH_BASE + "/hello",
                     AppConstants.HEALTH_ENDPOINT,

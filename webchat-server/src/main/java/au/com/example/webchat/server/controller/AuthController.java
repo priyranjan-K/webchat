@@ -4,7 +4,9 @@ import au.com.example.webchat.server.dto.AuthResponse;
 import au.com.example.webchat.server.dto.LoginRequest;
 import au.com.example.webchat.server.dto.PasswordResetRequest;
 import au.com.example.webchat.server.dto.SignUpRequest;
+import au.com.example.webchat.server.dto.PublicKeyResponse;
 import au.com.example.webchat.server.service.AuthService;
+import au.com.example.webchat.server.service.RsaKeyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,16 @@ import reactor.core.scheduler.Schedulers;
 public class AuthController {
 
     private final AuthService authService;
+    private final RsaKeyService rsaKeyService;
+
+    @GetMapping("/public-key")
+    public Mono<ResponseEntity<PublicKeyResponse>> getPublicKey() {
+        return Mono.fromCallable(() -> ResponseEntity.ok(
+                PublicKeyResponse.builder()
+                        .publicKey(rsaKeyService.getPublicKeyPem())
+                        .build()
+        )).subscribeOn(Schedulers.boundedElastic());
+    }
 
     /** Quick health check — listed as public in {@code SecurityConfig}. */
     @GetMapping("/hello")

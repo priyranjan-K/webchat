@@ -10,6 +10,7 @@ import au.com.example.webchat.server.model.User;
 import au.com.example.webchat.server.repository.JwtTokenRepository;
 import au.com.example.webchat.server.repository.UserRepository;
 import au.com.example.webchat.server.security.JwtTokenProvider;
+import au.com.example.webchat.server.service.RsaKeyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +28,7 @@ public class AuthService {
     private final PasswordEncoder    passwordEncoder;
     private final JwtTokenProvider   jwtTokenProvider;
     private final JwtTokenRepository jwtTokenRepository;
+    private final RsaKeyService      rsaKeyService;
 
     /**
      * Registers a new user and issues a JWT on success.
@@ -35,21 +37,24 @@ public class AuthService {
      * @return {@link AuthResponse} with the token, or an error message
      */
     public AuthResponse signup(SignUpRequest request) {
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+        String phone = rsaKeyService.decrypt(request.getPhoneNumber());
+        String password = rsaKeyService.decrypt(request.getPassword());
+
+        if (userRepository.existsByPhoneNumber(phone)) {
             return AuthResponse.builder()
                     .message("Phone number already registered!")
                     .build();
         }
 
         User user = User.builder()
-                .phoneNumber(request.getPhoneNumber())
+                .phoneNumber(phone)
                 .displayName(request.getDisplayName())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(password))
                 .build();
         userRepository.save(user);
 
         String token = issueToken(user.getPhoneNumber());
-        log.info("User registered: {}", request.getPhoneNumber());
+        log.info("User registered: {}", phone);
 
         return AuthResponse.builder()
                 .token(token)
@@ -66,9 +71,12 @@ public class AuthService {
      * @return {@link AuthResponse} with the token, or an error message
      */
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByPhoneNumber(request.getPhoneNumber()).orElse(null);
+        String phone = rsaKeyService.decrypt(request.getPhoneNumber());
+        String password = rsaKeyService.decrypt(request.getPassword());
 
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        User user = userRepository.findByPhoneNumber(phone).orElse(null);
+
+        if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
             return AuthResponse.builder()
                     .message("Invalid phone number or password!")
                     .build();
@@ -78,7 +86,7 @@ public class AuthService {
         userRepository.save(user);
 
         String token = issueToken(user.getPhoneNumber());
-        log.info("User logged in: {}", request.getPhoneNumber());
+        log.info("User logged in: {}", phone);
 
         return AuthResponse.builder()
                 .token(token)
@@ -107,7 +115,8 @@ public class AuthService {
      * @return {@link AuthResponse} with instructions or an error message
      */
     public AuthResponse requestPasswordReset(String phoneNumber) {
-        if (!userRepository.existsByPhoneNumber(phoneNumber)) {
+        String phone = rsaKeyService.decrypt(phoneNumber);
+        if (!userRepository.existsByPhoneNumber(phone)) {
             return AuthResponse.builder()
                     .message("Phone number is not registered!")
                     .build();
@@ -124,7 +133,10 @@ public class AuthService {
      * @return {@link AuthResponse} indicating success or failure
      */
     public AuthResponse resetPassword(PasswordResetRequest request) {
-        User user = userRepository.findByPhoneNumber(request.getPhoneNumber()).orElse(null);
+        String phone = rsaKeyService.decrypt(request.getPhoneNumber());
+        String newPassword = rsaKeyService.decrypt(request.getNewPassword());
+
+        User user = userRepository.findByPhoneNumber(phone).orElse(null);
         if (user == null) {
             return AuthResponse.builder()
                     .message("Phone number is not registered!")
@@ -137,15 +149,15 @@ public class AuthService {
                     .build();
         }
 
-        if (request.getNewPassword() == null || request.getNewPassword().isEmpty()) {
+        if (newPassword == null || newPassword.isEmpty()) {
             return AuthResponse.builder()
                     .message("New password is required!")
                     .build();
         }
 
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        log.info("Password reset for user: {}", request.getPhoneNumber());
+        log.info("Password reset for user: {}", phone);
 
         return AuthResponse.builder()
                 .message("Password reset successful!")

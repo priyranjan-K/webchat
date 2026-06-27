@@ -1,4 +1,5 @@
 import axios from 'axios'
+import JSEncrypt from 'jsencrypt'
 import {
   API_BASE_URL,
   PUBLIC_AUTH_ENDPOINTS,
@@ -45,6 +46,30 @@ apiClient.interceptors.response.use(
   }
 )
 
+// ── RSA Encryption Helpers ──────────────────────────────────────────────────
+
+/**
+ * Fetches the RSA public key from the backend.
+ */
+const fetchPublicKey = async () => {
+  const { data } = await apiClient.get('/auth/public-key')
+  return data.publicKey
+}
+
+/**
+ * Encrypts a string value using the provided RSA PEM public key.
+ */
+const encryptWithRsa = (value, publicKeyPem) => {
+  if (!value) return value
+  const encrypt = new JSEncrypt()
+  encrypt.setPublicKey(publicKeyPem)
+  const encrypted = encrypt.encrypt(value)
+  if (!encrypted) {
+    throw new Error('Encryption failed')
+  }
+  return encrypted
+}
+
 // ── Auth service ─────────────────────────────────────────────────────────────
 
 /**
@@ -59,9 +84,13 @@ export const authService = {
    * @returns {Promise<AuthResponse>}
    */
   signup: async (phoneNumber, password, displayName) => {
+    const publicKey = await fetchPublicKey()
+    const encryptedPhone = encryptWithRsa(phoneNumber, publicKey)
+    const encryptedPassword = encryptWithRsa(password, publicKey)
+    
     const { data } = await apiClient.post('/auth/signup', {
-      phoneNumber,
-      password,
+      phoneNumber: encryptedPhone,
+      password: encryptedPassword,
       displayName,
     })
     return data
@@ -74,7 +103,14 @@ export const authService = {
    * @returns {Promise<AuthResponse>}
    */
   login: async (phoneNumber, password) => {
-    const { data } = await apiClient.post('/auth/login', { phoneNumber, password })
+    const publicKey = await fetchPublicKey()
+    const encryptedPhone = encryptWithRsa(phoneNumber, publicKey)
+    const encryptedPassword = encryptWithRsa(password, publicKey)
+
+    const { data } = await apiClient.post('/auth/login', {
+      phoneNumber: encryptedPhone,
+      password: encryptedPassword,
+    })
     return data
   },
 
@@ -101,8 +137,10 @@ export const authService = {
    * @returns {Promise<AuthResponse>}
    */
   requestPasswordReset: async (phoneNumber) => {
+    const publicKey = await fetchPublicKey()
+    const encryptedPhone = encryptWithRsa(phoneNumber, publicKey)
     const { data } = await apiClient.post(
-      `/auth/forgot-password/request?phoneNumber=${encodeURIComponent(phoneNumber)}`
+      `/auth/forgot-password/request?phoneNumber=${encodeURIComponent(encryptedPhone)}`
     )
     return data
   },
@@ -115,10 +153,14 @@ export const authService = {
    * @returns {Promise<AuthResponse>}
    */
   resetPassword: async (phoneNumber, otp, newPassword) => {
+    const publicKey = await fetchPublicKey()
+    const encryptedPhone = encryptWithRsa(phoneNumber, publicKey)
+    const encryptedNewPassword = encryptWithRsa(newPassword, publicKey)
+
     const { data } = await apiClient.post('/auth/forgot-password/reset', {
-      phoneNumber,
+      phoneNumber: encryptedPhone,
       otp,
-      newPassword,
+      newPassword: encryptedNewPassword,
     })
     return data
   },
